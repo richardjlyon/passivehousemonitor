@@ -8,13 +8,15 @@
 * Device: kingswood_one
  */
 
+ #include "authenticate.h" // InfluxDB credentials
+ #include "InfluxDB.h"
+
  #define DELAY_BEFORE_REBOOT (10 * 1000)
  #define SAMPLE_RATE (10*1000) // Time between samples (miliseconds)
 
  #include <SparkFunRHT03.h>
- #include "Influxdb.h"
 
- Influxdb idb = Influxdb(USERNAME, PASSWORD);
+ InfluxDB idb = InfluxDB(USERNAME, PASSWORD);
  RHT03 rht; // This creates a RTH03 object, which we'll use to interact with the sensor
 
  double temperature;

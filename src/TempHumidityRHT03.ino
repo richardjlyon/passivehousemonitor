@@ -1,7 +1,8 @@
 /*
  * Project TempHumidityRHT03
- * Description: Temperature and Humidity monitor (RHT03 sensor)
+ * Temperature and Humidity monitor (RHT03 sensor)
  * Retrieves outside temperature from darksky.net
+ * Retrieves UV Index from OpenUV.io
  * Author: Richard Lyon
  * Date: 27 December 2017
  * Version: 0.1
@@ -11,10 +12,6 @@
 
 #include "authenticate.h" // InfluxDB credentials
 #include "InfluxDB.h"
-
-#define DELAY_BEFORE_REBOOT (20 * 1000)
-#define SAMPLE_RATE (1000 * 60 * 60 * 24 / 500) // 1000 requests per day (DarkSky limit)
-
 #include <SparkFunRHT03.h>
 
 InfluxDB idb = InfluxDB(USERNAME, PASSWORD);
@@ -33,41 +30,33 @@ double transmission = 0;
 double uvindex_corrected;
 String data = String(10);
 
-bool resetFlag = false;
-unsigned int rebootDelayMillis = DELAY_BEFORE_REBOOT;
-unsigned long rebootSync = millis();
-int cloudResetFunction(String command);
+int delay_millis_from_sample_rate(String sample_rate);
+String sample_rate_str;
+int delay_millis; // millis corresponding to sample_rate to delay loop()
 
 void setup() {
-    rht.begin(D2); // Initialize an RHT03 sensor, with the data pin connected to D2.
 
-    // Publish IP address to Particle
-    IPAddress myIP = WiFi.localIP();
-    Particle.publish("IP Address", String(myIP));
+    // Initialize an RHT03 sensor, with the data pin connected to D2.
+    rht.begin(D2);
 
-    // Declare Particle variables
-    Particle.variable("cloud_cover", cloud_cover);
-    Particle.variable("transmission", transmission);
-    Particle.variable("UV_index", uvindex);
-    Particle.variable("UV_index_cor", uvindex_corrected);
+    // Initialise to 500 samples per day (OpenUV limit) and publish
+    sample_rate_str = String(500);
+
+    // Set the delay time from the sample rate
+    delay_millis_from_sample_rate(sample_rate_str);
+
+    // Register sample rate cloud function
+    Particle.function("sample_rate", delay_millis_from_sample_rate);
 
     // Subscribe to webhooks
     Particle.subscribe("hook-response/dark_sky", didGetDarkSkyData, MY_DEVICES);
     Particle.subscribe("hook-response/uv_index", didGetOpenUVData, MY_DEVICES);
-
-    // Publish the reset function to Particle
-    Particle.function("reset", cloudResetFunction);
 
     // Set device name on InfluxDB
     idb.setDeviceName("kingswood_one");
 }
 
 void loop() {
-    // Handle cloud reset logic: requires a delay to prevent race conditions
-    if ((resetFlag) && (millis() - rebootSync >=  rebootDelayMillis)) {
-        Particle.publish("Remote Reset Initiated");
-        System.reset();
-    }
 
     int updateRet = rht.update();
 
@@ -94,8 +83,12 @@ void loop() {
         idb.add("uv_index", uvindex);
         idb.add("uv_index_corrected", uvindex_corrected);
         idb.sendAll();
+
+        // publish sample rate
+        Particle.publish("sample_rate", sample_rate_str, PRIVATE);
     }
-   delay(SAMPLE_RATE);
+
+    delay(delay_millis);
 }
 
 void didGetDarkSkyData(const char *event, const char *data) {
@@ -113,9 +106,10 @@ void didGetOpenUVData(const char *event, const char *data) {
     uvindex = atof(data);
 }
 
-int cloudResetFunction(String command)
-{
-    resetFlag = true;
-    rebootSync=millis();
+int delay_millis_from_sample_rate(String sample_rate) {
+    // sets the milliseconds of delay for the number of daily samples
+    sample_rate_str = sample_rate;
+    int sample_rate_int = atoi(sample_rate);
+    delay_millis = int(1000 * 60 * 60 * 24 / sample_rate_int);
     return 1;
 }

@@ -94,18 +94,9 @@ void loop() {
         idb.add("uv_index", uvindex);
         idb.add("uv_index_corrected", uvindex_corrected);
         idb.sendAll();
-
-        // Update console
-        //  Particle.publish("Updated InfluxDB");
-        //  Particle.publish("outside_temperature", String(temperature_outside));
-        //  Particle.publish("cloud_cover", String(cloud_cover));
-        //  Particle.publish("uvindex", String(uvindex));
-
     }
-
    delay(SAMPLE_RATE);
 }
-
 
 void didGetDarkSkyData(const char *event, const char *data) {
      // format: cloudCover~humidity~temperature
@@ -117,7 +108,6 @@ void didGetDarkSkyData(const char *event, const char *data) {
      humidity_outside = atof(strtok(NULL, "~"));
      temperature_outside = atof(strtok(NULL, "~"));
 }
-
 
 void didGetOpenUVData(const char *event, const char *data) {
     uvindex = atof(data);

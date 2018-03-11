@@ -13,6 +13,7 @@
 #include "authenticate.h" // InfluxDB credentials
 #include "InfluxDB.h"
 #include <SparkFunRHT03.h>
+#include "math.h"
 
 InfluxDB idb = InfluxDB(USERNAME, PASSWORD);
 RHT03 rht; // This creates a RTH03 object, which we'll use to interact with the sensor
@@ -71,7 +72,8 @@ void loop() {
         Particle.publish("uv_index", data, PRIVATE);
 
         // calculate corrected UV Index
-        transmission = (cloud_cover * -0.69) + 1.0;
+        // transmission = (cloud_cover * -0.69) + 1.0;
+        transmission = (1.0 - 0.75 * pow(cloud_cover, 3.4));
         uvindex_corrected = uvindex * transmission;
 
         // update influxDB

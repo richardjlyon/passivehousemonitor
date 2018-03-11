@@ -2,9 +2,7 @@
 
 An environmental logger for a Passive House.
 
-## Welcome to your project!
-
-This is the firmware for a
+This is the firmware for a Particle Photon.
 
 The main elements are:
 
